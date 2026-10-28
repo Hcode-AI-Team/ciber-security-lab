@@ -1,0 +1,11 @@
+node_modules/
+dist/
+*.tsbuildinfo
+.angular/
+coverage/
+*.sqlite
+*.sqlite-journal
+.env
+*.log
+.DS_Store
+Thumbs.db

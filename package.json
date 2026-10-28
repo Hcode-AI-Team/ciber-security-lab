@@ -1,0 +1,16 @@
+{
+  "name": "combio-manutencao",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Sistema de gestão de ordens de manutenção de usinas (UPVs) — Combio",
+  "scripts": {
+    "setup": "node scripts/setup.mjs",
+    "lab": "npm run build --prefix backend && npm run lab:run --prefix backend",
+    "install:all": "cd backend && npm install && cd ../frontend && npm install",
+    "start:backend": "npm run start:dev --prefix backend",
+    "start:frontend": "npm start --prefix frontend",
+    "test": "npm test --prefix backend && npm test --prefix frontend",
+    "lint": "npm run lint --prefix backend && npm run lint --prefix frontend",
+    "seed": "npm run seed --prefix backend"
+  }
+}
