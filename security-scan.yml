@@ -1,0 +1,60 @@
+name: Varredura de segurança (IA)
+
+# Encontro 4 — "notificação para casos urgentes" e "tarefa agendada".
+# Prepara o Encontro 5: aqui o subagente de security roda sozinho no CI;
+# lá ele vira um nó do grafo LangGraph com gate humano antes da GMUD.
+
+on:
+  # 1) a cada PR para main/develop: revisão automática
+  pull_request:
+    branches: [main, develop]
+  # 2) tarefa agendada: varredura diária às 06:20 UTC (03:20 BRT).
+  #    cron é SEMPRE UTC; mínimo 5 min; evite o minuto 0 (horário de pico atrasa).
+  schedule:
+    - cron: "20 6 * * 1-5"
+  # 3) botão manual
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+  id-token: write      # exigido pela autenticação padrão da claude-code-action
+  actions: read        # deixa o Claude ler resultados de CI no PR
+
+jobs:
+  security-review:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+
+      # Roda o MESMO subagente que a turma criou (.claude/agents/security-reviewer.md),
+      # agora no CI. prompt = modo automação (sem @claude).
+      - name: Revisão de segurança com Claude
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          prompt: |
+            Use o subagente security-reviewer para revisar o diff (ou, em schedule,
+            os módulos backend/src/**). Produza o bloco markdown + JSON no formato
+            definido no agente. Não aprove nada.
+          claude_args: |
+            --model claude-opus-5-5
+            --allowedTools "Read,Grep,Glob"
+
+      # Em varredura agendada, achado crítico vira issue (a "notificação urgente").
+      # No PR, o comentário do passo acima já basta.
+      - name: Abrir issue se varredura agendada achou algo
+        if: github.event_name == 'schedule'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          # Placeholder didático: no Encontro 5 o resultado do agente é lido e o
+          # corpo da issue é preenchido com os achados "crítico". Aqui mostramos o
+          # mecanismo gh issue create dentro do workflow.
+          echo "Se houver achado crítico, o Encontro 5 abre a issue aqui:"
+          echo "gh issue create --title '[SEGURANÇA] Varredura diária encontrou crítico' \\"
+          echo "   --label seguranca,urgente --body-file achados.md"
